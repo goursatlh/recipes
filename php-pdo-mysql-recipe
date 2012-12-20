@@ -1,0 +1,29 @@
+PHPPDOMYSQL_CFG=$(shell test "${PHPPDOMYSQLCONF}" != "" && echo ${PHPPDOMYSQLCONF} || echo "")
+PHPPDOMYSQL_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^pdo_mysql" | tr -d '\n'`
+php-pdo-mysql-msg:
+	@echo " *** check for PHP PDO MySQL (pdo-mysql) extension *** "
+php-pdo-mysql: php-cli php-pdo-mysql-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-pdo-mysql/ | grep -c ",php-pdo-mysql" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/pdo-mysql.ini ; \
+	fi
+	@if [ "${PHPPDOMYSQL_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/pdo-mysql.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/pdo-mysql.ini ]; then \
+		echo " *** PHP PDO MySQL (pdo-mysql) extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/pdo_mysql \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config \
+				--with-pdo-mysql=mysqlnd \
+				--with-zlib-dir=${INSTALLDIR} ${PHPPDOMYSQL_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=pdo_mysql.so" > ${INSTALLDIR}/etc/php/conf.d/pdo-mysql.ini \
+		) \
+	fi
+	@echo " *** PHP PDO MySQL (pdo-mysql) extension installed *** "

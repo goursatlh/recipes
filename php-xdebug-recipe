@@ -1,0 +1,37 @@
+PHPXDEBUG_VER=$(shell test "${PHPXDEBUG}" != "" && echo ${PHPXDEBUG} || echo "xdebug-2.2.1")
+PHPXDEBUG_URL=$(shell test "${PHPXDEBUGURL}" != "" && echo ${PHPXDEBUGURL} || echo "http://xdebug.org/files/${PHPXDEBUG_VER}.tgz")
+PHPXDEBUG_CFG=$(shell test "${PHPXDEBUGCONF}" != "" && echo ${PHPXDEBUGCONF} || echo "")
+PHP_EXTENSION_DIR=$(shell ${INSTALLDIR}/bin/php-config --extension-dir)
+php-xdebug-msg:
+	@echo " *** check for ${PHPXDEBUG_VER} *** "
+php-xdebug: fs php-cli php-xdebug-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-xdebug/ | grep -c ",php-xdebug" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/xdebug.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/xdebug.ini ]; then \
+		echo " *** ${PHPXDEBUG_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHPXDEBUG_URL} ${INSTALLDIR}/tmp ${PHPXDEBUG_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHPXDEBUG_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHPXDEBUG_VER} \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPXDEBUG_CFG} \
+			&& make \
+			&& make install \
+			&& echo "zend_extension=${PHP_EXTENSION_DIR}/xdebug.so" > ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.remote_enable = 1" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.remote_handler = dbgp" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.remote_mode = req" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.remote_port = 9000" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.remote_host = 127.0.0.1" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.remote_log = ${INSTALLDIR}/tmp/xdebug_remote_debug" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.profiler_enable = 0" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.profiler_enable_trigger = 1" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.profiler_output_dir = ${INSTALLDIR}" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& echo "xdebug.profiler_output_name = xdebug.cachegrind.out.%s" >> ${INSTALLDIR}/etc/php/conf.d/xdebug.ini \
+			&& rm -Rf ${INSTALLDIR}/tmp/${PHPXDEBUG_VER} \
+		) \
+	fi
+	@echo " *** ${PHPXDEBUG_VER} installed *** "

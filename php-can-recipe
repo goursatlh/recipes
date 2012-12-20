@@ -1,0 +1,26 @@
+PHPCAN_VER=$(shell test "${PHPCAN}" != "" && echo ${PHPCAN} || echo "v0.3.0")
+PHPCAN_URL=$(shell test "${PHPCANURL}" != "" && echo ${PHPCANURL} || echo "https://github.com/phpcan/phpcan/tarball/${PHPCAN_VER}")
+PHPCAN_CFG=$(shell test "${PHPCANCONF}" != "" && echo ${PHPCANCONF} || echo "")
+php-can-msg:
+	@echo " *** check for phpcan-${PHPCAN_VER} *** "
+php-can: fs php-cli libevent php-hash php-can-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-can/ | grep -c ",php-can" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/can.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/can.ini ]; then \
+		echo " *** phpcan-${PHPCAN_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHPCAN_URL} ${INSTALLDIR}/tmp phpcan-${PHPCAN_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/phpcan-${PHPCAN_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/phpcan-phpcan-* \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config --with-libevent=${INSTALLDIR} ${PHPCAN_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=can.so" > ${INSTALLDIR}/etc/php/conf.d/can.ini \
+			&& rm -Rf ${INSTALLDIR}/tmp/phpcan-phpcan-* \
+		) \
+	fi
+	@echo " *** phpcan-${PHPCAN_VER} installed *** "

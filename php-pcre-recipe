@@ -1,0 +1,28 @@
+PHPPCRE_CFG=$(shell test "${PHPPCRECONF}" != "" && echo ${PHPPCRECONF} || echo "")
+PHPPCRE_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^pcre" | tr -d '\n'`
+php-pcre-msg:
+	@echo " *** check for PHP PCRE extension *** "
+php-pcre: fs php-cli php-pcre-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-pcre/ | grep -c ",php-pcre" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/pcre.ini ; \
+	fi
+	@if [ "${PHPPCRE_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/pcre.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/pcre.ini ]; then \
+		echo " *** PHP PCRE extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/pcre \
+			&& cp config0.m4 config.m4 \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPPCRE_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=pcre.so" > ${INSTALLDIR}/etc/php/conf.d/pcre.ini \
+		) \
+	fi
+	@echo " *** PHP PCRE extension installed *** "

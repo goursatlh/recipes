@@ -1,0 +1,27 @@
+PHPAPC_VER=$(shell test "${PHPAPC}" != "" && echo ${PHPAPC} || echo "APC-3.1.13")
+PHPAPC_URL=$(shell test "${PHPAPCURL}" != "" && echo ${PHPAPCURL} || echo "http://pecl.php.net/get/${PHPAPC_VER}.tgz")
+PHPAPC_CFG=$(shell test "${PHPAPCCONF}" != "" && echo ${PHPAPCCONF} || echo "")
+php-apc-msg:
+	@echo " *** check for ${PHPAPC_VER} *** "
+php-apc: fs php-cli php-apc-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-apc/ | grep -c ",php-apc" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/apc.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/apc.ini ]; then \
+		echo " *** ${PHPAPC_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHPAPC_URL} ${INSTALLDIR}/tmp ${PHPAPC_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHPAPC_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHPAPC_VER} \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPAPC_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=apc.so" > ${INSTALLDIR}/etc/php/conf.d/apc.ini \
+			&& echo "apc.enable_cli=1" >> ${INSTALLDIR}/etc/php/conf.d/apc.ini \
+			&& rm -Rf ${INSTALLDIR}/tmp/${PHPAPC_VER} \
+		) \
+	fi
+	@echo " *** ${PHPAPC_VER} installed *** "

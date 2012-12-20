@@ -1,0 +1,24 @@
+LIBICONV_VER=$(shell test "${LIBICONV}" != "" && echo ${LIBICONV} || echo "libiconv-1.14")
+LIBICONV_URL=$(shell test "${LIBICONVURL}" != "" && echo ${LIBICONVURL} || echo "http://ftp.gnu.org/pub/gnu/libiconv/${LIBICONV_VER}.tar.gz")
+LIBICONV_CFG=$(shell test "${LIBICONVCONF}" != "" && echo ${LIBICONVCONF} || echo "")
+libiconv-msg:
+	@echo " *** check for ${LIBICONV_VER} *** "
+libiconv: fs libiconv-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libiconv/ | grep -c ",libiconv" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libiconv.la ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libiconv.la ]; then \
+		echo " *** ${LIBICONV_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBICONV_URL} ${INSTALLDIR}/tmp ${LIBICONV_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBICONV_VER}.tar.gz | tar xf - \
+			&& cd ${LIBICONV_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${LIBICONV_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBICONV_VER} \
+		) \
+	fi
+	@echo " *** ${LIBICONV_VER} installed *** "

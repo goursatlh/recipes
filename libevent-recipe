@@ -1,0 +1,24 @@
+LIBEVENT_VER=$(shell test "${LIBEVENT}" != "" && echo ${LIBEVENT} || echo "libevent-2.0.20-stable")
+LIBEVENT_URL=$(shell test "${LIBEVENTURL}" != "" && echo ${LIBEVENTURL} || echo "https://github.com/downloads/libevent/libevent/${LIBEVENT_VER}.tar.gz")
+LIBEVENT_CFG=$(shell test "${LIBEVENTCONF}" != "" && echo ${LIBEVENTCONF} || echo "")
+libevent-msg:
+	@echo " *** check for ${LIBEVENT_VER} *** "
+libevent: fs libevent-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libevent/ | grep -c ",libevent" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libevent.a ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libevent.a ]; then \
+		echo " *** ${LIBEVENT_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBEVENT_URL} ${INSTALLDIR}/tmp ${LIBEVENT_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBEVENT_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${LIBEVENT_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${LIBEVENT_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBEVENT_VER} \
+		) \
+	fi
+	@echo " *** ${LIBEVENT_VER} installed *** "

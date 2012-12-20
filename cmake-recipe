@@ -1,0 +1,29 @@
+CMAKE_VER=$(shell test "${CMAKE}" != "" && echo ${CMAKE} || echo "cmake-2.8.9")
+CMAKE_URL=$(shell test "${CMAKEURL}" != "" && echo ${CMAKEURL} || echo "http://www.cmake.org/files/v2.8/${CMAKE_VER}.tar.gz")
+CMAKE_CFG=$(shell test "${CMAKECONF}" != "" && echo ${CMAKECONF} || echo "")
+cmake-msg:
+	@echo " *** check for ${CMAKE_VER} *** "
+cmake: fs ncurses cmake-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,cmake/ | grep -c ",cmake" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/bin/cmake ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/cmake ]; then \
+		echo " *** ${CMAKE_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${CMAKE_URL} ${INSTALLDIR}/tmp ${CMAKE_VER}.tar.gz \
+			&& gunzip -c ${INSTALLDIR}/tmp/${CMAKE_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${CMAKE_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${CMAKE_CFG} \
+			&& sed -e "s#CURSES_INCLUDE_PATH:FILEPATH=${INSTALLDIR}/include/ncurses#CURSES_INCLUDE_PATH:FILEPATH=${INSTALLDIR}/include#" \
+				CMakeCache.txt > CMakeCache.txt.new \
+			&& mv CMakeCache.txt.new CMakeCache.txt \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${CMAKE_CFG} \
+			&& make VERBOSE=1 \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${CMAKE_VER} \
+		) \
+	fi
+	@echo " *** ${CMAKE_VER} installed *** "

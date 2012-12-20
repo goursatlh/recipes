@@ -1,0 +1,25 @@
+LIBMEMCACHED_VER=$(shell test "${LIBMEMCACHED}" != "" && echo ${LIBMEMCACHED} || echo "libmemcached-1.0.11")
+LIBMEMCACHED_URL=$(shell test "${LIBMEMCACHEDURL}" != "" && echo ${LIBMEMCACHEDURL} || echo "https://launchpad.net/libmemcached/1.0/1.0.11/+download/${LIBMEMCACHED_VER}.tar.gz")
+LIBMEMCACHED_CFG=$(shell test "${LIBMEMCACHEDCONF}" != "" && echo ${LIBMEMCACHEDCONF} || echo "")
+libmemcached-msg:
+	@echo " *** check for ${LIBMEMCACHED_VER} *** "
+libmemcached: fs memcached libmemcached-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libmemcached/ | grep -c ",libmemcached" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libmemcached.a ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libmemcached.a ]; then \
+		echo " *** ${LIBMEMCACHED_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBMEMCACHED_URL} ${INSTALLDIR}/tmp ${LIBMEMCACHED_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBMEMCACHED_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${LIBMEMCACHED_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${LIBMEMCACHED_CFG} \
+				--with-memcached=${INSTALLDIR}/bin/memcached \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBMEMCACHED_VER} \
+		) \
+	fi
+	@echo " *** ${LIBMEMCACHED_VER} installed *** "

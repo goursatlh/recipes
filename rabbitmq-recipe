@@ -1,0 +1,29 @@
+RABBITMQ_VER=$(shell test "${RABBITMQ}" != "" && echo ${RABBITMQ} || echo "2.8.7")
+RABBITMQ_URL=$(shell test "${RABBITMQURL}" != "" && echo ${RABBITMQURL} || echo "http://www.rabbitmq.com/releases/rabbitmq-server/v${RABBITMQ_VER}/rabbitmq-server-generic-unix-${RABBITMQ_VER}.tar.gz")
+RABBITMQ_CFG=$(shell test "${RABBITMQCONF}" != "" && echo ${RABBITMQCONF} || echo "")
+rabbitmq-msg:
+	@echo " *** check for RabbitMQ Server ${RABBITMQ_VER} *** "
+rabbitmq: fs rabbitmq-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,rabbitmq/ | grep -c ",rabbitmq" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -Rf ${INSTALLDIR}/bin/rabbitmq_server-${RABBITMQ_VER} ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/rabbitmq_server-${RABBITMQ_VER}/sbin/rabbitmq-server ]; then \
+		echo " *** RabbitMQ Server ${RABBITMQ_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${RABBITMQ_URL} ${INSTALLDIR}/tmp rabbitmq-server-generic-unix-${RABBITMQ_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/rabbitmq-server-generic-unix-${RABBITMQ_VER}.tar.gz | tar xf - \
+			&& mv ${INSTALLDIR}/tmp/rabbitmq_server-${RABBITMQ_VER} ${INSTALLDIR}/bin/rabbitmq_server-${RABBITMQ_VER}\
+		) \
+	fi
+	@echo " *** RabbitMQ Server ${RABBITMQ_VER} installed *** "
+	@make rabbitmq-supervise-service
+
+rabbitmq-supervise-service: dtools
+	@echo " *** RabbitMQ Server supervise service will be installed *** "
+	@mkdir -p ${INSTALLDIR}/services/rabbitmq/supervise
+	@echo "#!/bin/sh" > ${INSTALLDIR}/services/rabbitmq/run
+	@echo "exec ${INSTALLDIR}/bin/setuidgid ${USER} ${INSTALLDIR}/bin/rabbitmq_server-${RABBITMQ_VER}/sbin/rabbitmq-server " >> ${INSTALLDIR}/services/rabbitmq/run
+	@chmod 700 ${INSTALLDIR}/services/rabbitmq/supervise
+	@chmod 755 ${INSTALLDIR}/services/rabbitmq/run
+	@echo " *** RabbitMQ Server supervise service files installed *** "

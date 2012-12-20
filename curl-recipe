@@ -1,0 +1,26 @@
+CURL_VER=$(shell test "${CURL}" != "" && echo ${CURL} || echo "curl-7.26.0")
+CURL_URL=$(shell test "${CURLURL}" != "" && echo ${CURLURL} || echo "http://curl.haxx.se/download/${CURL_VER}.tar.gz")
+CURL_CFG=$(shell test "${CURLCONF}" != "" && echo ${CURLCONF} || echo "")
+curl-msg:
+	@echo " *** check for ${CURL_VER} *** "
+curl: fs zlib openssl curl-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,curl/ | grep -c ",curl" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libcurl.a ; \
+	fi
+	-@if [ ! -f ${INSTALLDIR}/lib/libcurl.a ]; then \
+		echo " *** ${CURL_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${CURL_URL} ${INSTALLDIR}/tmp ${CURL_VER}.tar.gz \
+			&& gunzip -c ${INSTALLDIR}/tmp/${CURL_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${CURL_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} \
+				--with-ssl=${INSTALLDIR} \
+				--with-zlib=${INSTALLDIR} ${CURL_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${CURL_VER} \
+	) \
+	fi
+	@echo " *** ${CURL_VER} installed *** "

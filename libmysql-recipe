@@ -1,0 +1,24 @@
+LIBMYSQL_VER=$(shell test "${LIBMYSQL}" != "" && echo ${LIBMYSQL} || echo "mysql-connector-c-6.0.2")
+LIBMYSQL_URL=$(shell test "${LIBMYSQLURL}" != "" && echo ${LIBMYSQLURL} || echo "http://dev.mysql.com/get/Downloads/Connector-C/${LIBMYSQL_VER}.tar.gz/from/http://cdn.mysql.com/")
+LIBMYSQL_CFG=$(shell test "${LIBMYSQLCONF}" != "" && echo ${LIBMYSQLCONF} || echo "")
+libmysql-msg:
+	@echo " *** check for ${LIBMYSQL_VER} *** "
+libmysql: fs libmysql-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libmysql/ | grep -c ",libmysql" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libmysqlclient.a ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libmysqlclient.a ]; then \
+		echo " *** ${LIBMYSQL_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBMYSQL_URL} ${INSTALLDIR}/tmp ${LIBMYSQL_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBMYSQL_VER}.tar.gz | tar xf - \
+			&& cd ${LIBMYSQL_VER} \
+			&& cmake \
+				-DCMAKE_INSTALL_PREFIX=${INSTALLDIR} ${LIBMYSQL_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBMYSQL_VER}ss \
+		) \
+	fi
+	@echo " *** ${LIBMYSQL_VER} installed *** "

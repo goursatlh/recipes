@@ -1,0 +1,27 @@
+PHPSHMOP_CFG=$(shell test "${PHPSHMOPCONF}" != "" && echo ${PHPSHMOPCONF} || echo "")
+PHPSHMOP_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^shmop" | tr -d '\n'`
+php-shmop-msg:
+	@echo " *** check for PHP Shared Memory (shmop) extension *** "
+php-shmop: php-cli php-shmop-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-shmop/ | grep -c ",php-shmop" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/shmop.ini ; \
+	fi
+	@if [ "${PHPSHMOP_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/shmop.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/shmop.ini ]; then \
+		echo " *** PHP Shared Memory (shmop) extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/shmop \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPSHMOP_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=shmop.so" > ${INSTALLDIR}/etc/php/conf.d/shmop.ini \
+		) \
+	fi
+	@echo " *** PHP Shared Memory (shmop) extension installed *** "

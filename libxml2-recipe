@@ -1,0 +1,24 @@
+LIBXML2_VER=$(shell test "${LIBXML2}" != "" && echo ${LIBXML2} || echo "libxml2-2.8.0")
+LIBXML2_URL=$(shell test "${LIBXML2URL}" != "" && echo ${LIBXML2URL} || echo "ftp://xmlsoft.org/libxml2/${LIBXML2_VER}.tar.gz")
+LIBXML2_CFG=$(shell test "${LIBXML2CONF}" != "" && echo ${LIBXML2CONF} || echo "")
+libxml2-msg:
+	@echo " *** check for ${LIBXML2_VER} *** "
+libxml2: fs libxml2-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libxml2/ | grep -c ",libxml2" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/bin/xml2-config ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/xml2-config ]; then \
+		echo " *** ${LIBXML2_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBXML2_URL} ${INSTALLDIR}/tmp ${LIBXML2_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBXML2_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${LIBXML2_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${LIBXML2_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBXML2_VER} \
+		) \
+	fi
+	@echo " *** ${LIBXML2_VER} installed *** "

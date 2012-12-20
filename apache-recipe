@@ -1,0 +1,35 @@
+APACHE_VER=$(shell test "${APACHE}" != "" && echo ${APACHE} || echo "httpd-2.2.22")
+APACHE_URL=$(shell test "${APACHEURL}" != "" && echo ${APACHEURL} || echo "http://mirror.arcor-online.net/www.apache.org//httpd/${APACHE_VER}.tar.gz")
+APACHE_CFG=$(shell test "${APACHECONF}" != "" && echo ${APACHECONF} || echo "")
+apache-msg:
+	@echo " *** check for ${APACHE_VER} *** "
+apache: fs apache-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,apache/ | grep -c ",apache" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/bin/apache/httpd ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/apache/httpd ]; then \
+		echo " *** ${APACHE_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${APACHE_URL} ${INSTALLDIR}/tmp ${APACHE_VER}.tar.gz \
+			&& gunzip -c ${INSTALLDIR}/tmp/${APACHE_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${APACHE_VER} \
+			&& ./configure --enable-so \
+				--prefix=${INSTALLDIR}/apache ${APACHE_CFG} \
+			&& make \
+			&& make install \
+			&& ln -sf ${INSTALLDIR}/apache/bin ${INSTALLDIR}/bin/apache \
+			&& rm -Rf ${INSTALLDIR}/tmp/${APACHE_VER} \
+		) \
+	fi
+	@echo " *** ${APACHE_VER} installed *** "
+	@make apache-supervise-service
+
+apache-supervise-service: dtools
+	@echo " *** apache supervise service will be installed *** "
+	@mkdir -p ${INSTALLDIR}/services/apache/supervise
+	@echo "#!/bin/sh" > ${INSTALLDIR}/services/apache/run
+	@echo "exec ${INSTALLDIR}/bin/setuidgid ${USER} ${INSTALLDIR}/bin/apache/httpd -f ${INSTALLDIR}/apache/conf/httpd.conf -DFOREGROUND" >> ${INSTALLDIR}/services/apache/run
+	@chmod 700 ${INSTALLDIR}/services/apache/supervise
+	@chmod 755 ${INSTALLDIR}/services/apache/run
+	@echo " *** apache supervise service files installed *** "

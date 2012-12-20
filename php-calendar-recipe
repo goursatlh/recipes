@@ -1,0 +1,27 @@
+PHPCALENDAR_CFG=$(shell test "${PHPCALENDARCONF}" != "" && echo ${PHPCALENDARCONF} || echo "")
+PHPCALENDAR_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^calendar" | tr -d '\n'`
+php-calendar-msg:
+	@echo " *** check for PHP Calendar extension *** "
+php-calendar: php-cli php-calendar-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-calendar/ | grep -c ",php-calendar" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/calendar.ini ; \
+	fi
+	@if [ "${PHPCALENDAR_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/calendar.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/calendar.ini ]; then \
+		echo " *** PHP Calendar extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/calendar \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPCALENDAR_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=calendar.so" > ${INSTALLDIR}/etc/php/conf.d/calendar.ini \
+		) \
+	fi
+	@echo " *** PHP Calendar extension installed *** "

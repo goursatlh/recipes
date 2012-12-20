@@ -1,0 +1,15 @@
+pear-phpmd-msg:
+	@echo " *** check for Php Mess Detector *** "
+pear-phpmd: fs php-cli php-tokenizer php-dom php-simplexml php-xmlwriter php-xmlreader pear-phpmd-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,pear-phpmd/ | grep -c ",pear-phpmd" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -Rf ${INSTALLDIR}/lib/php/.registry/.channel.pear.phpmd.org ${INSTALLDIR}/lib/php/phpmd ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/php/phpmd/installer.php ]; then \
+		echo " *** Php Mess Detector will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& ${INSTALLDIR}/bin/pear config-set auto_discover 1 \
+			&& ${INSTALLDIR}/bin/pear install pear.phpmd.org/PHP_PMD \
+		) \
+	fi
+	@echo " *** Php Mess Detector installed *** "

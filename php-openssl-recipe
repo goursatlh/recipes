@@ -1,0 +1,30 @@
+PHPOPENSSL_CFG=$(shell test "${PHPOPENSSLCONF}" != "" && echo ${PHPOPENSSLCONF} || echo "")
+PHPOPENSSL_CMPL=`${INSTALLDIR}/bin/php-config --configure-options | grep -c " --with-openssl" | tr -d '\n'`
+php-openssl-msg:
+	@echo " *** check for PHP OpenSSL extension *** "
+php-openssl: php-cli openssl php-openssl-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-openssl/ | grep -c ",php-openssl" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/openssl.ini ; \
+	fi
+	@if [ "${PHPOPENSSL_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/openssl.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/openssl.ini ]; then \
+		echo " *** PHP OpenSSL extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/openssl \
+			&& mv config0.m4 config.m4 \
+			&& export LDFLAGS="-L${INSTALLDIR}/lib" \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config \
+				--with-openssl=${INSTALLDIR} ${PHPOPENSSL_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=openssl.so" > ${INSTALLDIR}/etc/php/conf.d/openssl.ini \
+		) \
+	fi
+	@echo " *** PHP OpenSSL extension installed *** "

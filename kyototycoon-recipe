@@ -1,0 +1,38 @@
+KYOTOTYCOON_VER=$(shell test "${KYOTOTYCOON}" != "" && echo ${KYOTOTYCOON} || echo "kyototycoon-0.9.56")
+KYOTOTYCOON_URL=$(shell test "${KYOTOTYCOONURL}" != "" && echo ${KYOTOTYCOONURL} || echo "http://fallabs.com/kyototycoon/pkg/${KYOTOTYCOON_VER}.tar.gz")
+KYOTOTYCOON_CFG=$(shell test "${KYOTOTYCOONCONF}" != "" && echo ${KYOTOTYCOONCONF} || echo "")
+kyototycoon-msg:
+	@echo " *** check for ${KYOTOTYCOON_VER} *** "
+kyototycoon: kyotocabinet pkg-config kyototycoon-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,kyototycoon/ | grep -c ",kyototycoon" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libkyototycoon.a ; \
+	fi
+	-@if [ ! -f ${INSTALLDIR}/lib/libkyototycoon.a ]; then \
+		echo " *** ${KYOTOTYCOON_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${KYOTOTYCOON_URL} ${INSTALLDIR}/tmp ${KYOTOTYCOON_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${KYOTOTYCOON_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${KYOTOTYCOON_VER} \
+			&& which pkg-config \
+			&& ./configure \
+				--prefix=${INSTALLDIR} \
+				--with-kc=${INSTALLDIR} ${KYOTOTYCOON_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${KYOTOTYCOON_VER} \
+	) \
+	fi
+	@echo " *** ${KYOTOTYCOON_VER} installed *** "
+	@make kyototycoon-supervise-service
+	
+kyototycoon-supervise-service: conf2args dtools
+	@echo " *** kyototycoon supervise service will be installed *** "
+	-@sed -e "s#%INSTALLDIR%#${INSTALLDIR}#g" ${PWD}/templates/kyototycoon.conf > ${INSTALLDIR}/etc/kyototycoon.conf
+	@mkdir -p ${INSTALLDIR}/services/kyototycoon/supervise
+	@echo "#!/bin/sh" > ${INSTALLDIR}/services/kyototycoon/run
+	@echo "ARGS=\$$(/usr/bin/perl ${INSTALLDIR}/bin/conf2args ${INSTALLDIR}/etc/kyototycoon.conf)" >> ${INSTALLDIR}/services/kyototycoon/run
+	@echo "exec ${INSTALLDIR}/bin/setuidgid ${USER} ${INSTALLDIR}/bin/ktserver \$${ARGS} " >> ${INSTALLDIR}/services/kyototycoon/run
+	@chmod 700 ${INSTALLDIR}/services/kyototycoon/supervise
+	@chmod 755 ${INSTALLDIR}/services/kyototycoon/run
+	@echo " *** kyototycoon supervise service files installed *** "

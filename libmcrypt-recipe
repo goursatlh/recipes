@@ -1,0 +1,25 @@
+LIBMCRYPTV="2.5.8"
+LIBMCRYPT_VER=$(shell test "${LIBMCRYPT}" != "" && echo ${LIBMCRYPT} || echo "libmcrypt-"${LIBMCRYPTV})
+LIBMCRYPT_URL=$(shell test "${LIBMCRYPTURL}" != "" && echo ${LIBMCRYPTURL} || echo "http://downloads.sourceforge.net/project/mcrypt/Libmcrypt/${LIBMCRYPTV}/${LIBMCRYPT_VER}.tar.gz")
+LIBMCRYPT_CFG=$(shell test "${LIBMCRYPTCONF}" != "" && echo ${LIBMCRYPTCONF} || echo "")
+libmcrypt-msg:
+	@echo " *** check for ${LIBMCRYPT_VER} *** "
+libmcrypt: fs libmcrypt-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libiconv/ | grep -c ",libiconv" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libmcrypt.la ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libmcrypt.la ]; then \
+		echo " *** ${LIBMCRYPT_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBMCRYPT_URL} ${INSTALLDIR}/tmp ${LIBMCRYPT_VER}.tar.gz \
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBMCRYPT_VER}.tar.gz | tar xf - \
+			&& cd ${LIBMCRYPT_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${LIBMCRYPT_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBMCRYPT_VER} \
+		) \
+	fi
+	@echo " *** ${LIBMCRYPT_VER} installed *** "

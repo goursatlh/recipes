@@ -1,0 +1,27 @@
+PHPMYSQLI_CFG=$(shell test "${PHPMYSQLICONF}" != "" && echo ${PHPMYSQLICONF} || echo "")
+PHPMYSQLI_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^mysqli\$$" | tr -d '\n'`
+php-mysqli-msg:
+	@echo " *** check for PHP MySQL Improved (mysqli) extension *** "
+php-mysqli: php-cli php-mysqli-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-mysqli/ | grep -c ",php-mysqli" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/mysqli.ini ; \
+	fi
+	@if [ "${PHPMYSQLI_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/mysqli.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/mysqli.ini ]; then \
+		echo " *** PHP MySQL Improved (mysqli) extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/mysqli \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPMYSQLI_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=mysqli.so" > ${INSTALLDIR}/etc/php/conf.d/mysqli.ini \
+		) \
+	fi
+	@echo " *** PHP MySQL Improved (mysqli) extension installed *** "

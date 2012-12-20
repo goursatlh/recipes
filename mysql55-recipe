@@ -1,0 +1,61 @@
+MYSQL_VER=$(shell test "${MYSQL}" != "" && echo ${MYSQL} || echo "mysql-5.5.28")
+MYSQL_URL=$(shell test "${MYSQLURL}" != "" && echo ${MYSQLURL} || echo "http://www.mysql.de/get/Downloads/MySQL-5.5/${MYSQL_VER}.tar.gz/from/http://cdn.mysql.com/")
+MYSQL_CFG=$(shell test "${MYSQLCONF}" != "" && echo ${MYSQLCONF} || echo "")
+MYSQLDATADIR=${INSTALLDIR}/var/mysql
+mysql55-msg:
+	@echo " *** check for ${MYSQL_VER} *** "
+mysql55: fs libedit cmake mysql55-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,mysql55/ | grep -c ",mysql55" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/bin/mysqld ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/mysql/mysqld ]; then \
+		echo " *** ${MYSQL_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${MYSQL_URL} ${INSTALLDIR}/tmp ${MYSQL_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${MYSQL_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${MYSQL_VER} \
+			&& ${INSTALLDIR}/bin/cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/mysql \
+				-DZLIB_INCLUDE_DIR=${INSTALLDIR} \
+				-DWITH_UNIT_TESTS=OFF \
+				-DWITH_READLINE=ON \
+				-DWITH_FEDERATED_STORAGE_ENGINE=OFF \
+				-DMYSQL_DATADIR=${MYSQLDATADIR} \
+				-DCURSES_LIBRARY=${INSTALLDIR}/lib/libncurses.a \
+				-DCURSES_INCLUDE_PATH=${INSTALLDIR}/include \
+				-DWITH_EXTRA_CHARSETS=complex ${MYSQL_CFG} \
+			&& make VERBOSE=1 \
+			&& make install \
+			&& mkdir ${MYSQLDATADIR} \
+			&& ln -sf ${INSTALLDIR}/mysql/bin ${INSTALLDIR}/bin/mysql \
+			&& rm -Rf ${INSTALLDIR}/tmp/${MYSQL_VER} \
+		) \
+	fi
+	@echo " *** ${MYSQL_VER} installed *** "
+	@make mysql55-post-install
+	@make mysql55-supervise-service
+
+mysql55-post-install:
+	${INSTALLDIR}/mysql/scripts/mysql_install_db \
+	    --basedir=${INSTALLDIR}/mysql \
+	    --user=${USER} \
+	    --datadir=${MYSQLDATADIR} \
+	    --pid-file=${INSTALLDIR}/var/run/mysql.pid \
+	    --log-error=${INSTALLDIR}/var/log/mysql_err.log
+
+mysql55-supervise-service: dtools
+	@echo " *** mysql supervise service will be installed *** "
+	@mkdir -p ${INSTALLDIR}/services/mysql/supervise
+	@echo "#!/bin/sh" > ${INSTALLDIR}/services/mysql/run
+	@echo "exec ${INSTALLDIR}/bin/setuidgid ${USER} \\"            >> ${INSTALLDIR}/services/mysql/run
+	@echo  "   ${INSTALLDIR}/bin/mysql/mysqld_safe \\"             >> ${INSTALLDIR}/services/mysql/run
+	@echo "    --user=${USER} \\"                                  >> ${INSTALLDIR}/services/mysql/run
+	@echo "    --datadir=${MYSQLDATADIR} \\"                       >> ${INSTALLDIR}/services/mysql/run
+	@echo "    --pid-file=${INSTALLDIR}/var/run/mysql.pid \\"      >> ${INSTALLDIR}/services/mysql/run
+	@echo "    --log-error=${INSTALLDIR}/var/log/mysql_err.log \\" >> ${INSTALLDIR}/services/mysql/run
+	@echo "    --plugin-dir=${INSTALLDIR}/mysql/lib/plugin \\"     >> ${INSTALLDIR}/services/mysql/run
+	@echo "    --collation-server=utf8_general_ci \\"              >> ${INSTALLDIR}/services/mysql/run
+	@echo "    --character-set-server=utf8"                        >> ${INSTALLDIR}/services/mysql/run
+	@chmod 700 ${INSTALLDIR}/services/mysql/supervise
+	@chmod 755 ${INSTALLDIR}/services/mysql/run
+	@echo " *** mysql supervise service files installed *** "

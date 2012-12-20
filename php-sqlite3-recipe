@@ -1,0 +1,27 @@
+PHPSQLITE3_CFG=$(shell test "${PHPSQLITE3CONF}" != "" && echo ${PHPSQLITE3CONF} || echo "")
+PHPSQLITE3_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^sqlite3" | tr -d '\n'`
+php-sqlite3-msg:
+	@echo " *** check for PHP Sqlite3 extension *** "
+php-sqlite3: fs php-cli php-sqlite3-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-sqlite3/ | grep -c ",php-sqlite3" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/sqlite3.ini ; \
+	fi
+	@if [ "${PHPSQLITE3_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/sqlite3.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/sqlite3.ini ]; then \
+		echo " *** PHP Sqlite3 extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/sqlite3 \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPSQLITE3_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=sqlite3.so" > ${INSTALLDIR}/etc/php/conf.d/sqlite3.ini \
+		) \
+	fi
+	@echo " *** PHP Sqlite3 extension installed *** "

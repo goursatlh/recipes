@@ -1,0 +1,99 @@
+#!/bin/bash
+SELF=$(cd $(dirname $0); pwd -P)/$(basename $0)
+USER=$(whoami)
+# prints usage
+_usage ( ) {
+	script=$(basename $0)
+	echo "Usage: sudo $script <command> <service>"
+	echo "========================================="
+	echo "Available commands:"
+	echo "       start <service>   - Start services"
+	echo "       stop <service>    - Stop service"
+	echo "       status <service>  - Get status info for a service"
+	echo "       restart <service> - Restart service"
+	exit 1
+}
+# check user
+if [ ! $USER == "root" ]; then
+    _usage
+fi
+# check arguments
+if [ ! $# == 2 ]; then
+	if [ ! $1 == "version" ]; then
+	    _usage
+	fi
+fi
+if [ ! -e %INSTALLDIR%/services/$2 ]; then
+	if [ ! $2 == "all" ]; then
+		echo "Unknown service $2"
+		exit 1
+	fi
+fi
+SVCNAME=$2
+export LD_LIBRARY_PATH=%INSTALLDIR%/lib:%INSTALLDIR%/lib/php
+case `uname` in
+SunOS) ps_cmd="ps -ef"; awk_para='{print $2;}' ;;
+*)     ps_cmd="ps ax";  awk_para='{print $1;}' ;;
+esac
+# kill process by name
+killproc ( ) {
+    for i in `$ps_cmd|grep -v grep|grep $1|awk "$awk_para"`; do
+        kill $i 2>/dev/null
+    done
+}
+#start service by name
+_start ( ) {
+	if [ ! -d $1 ]; then
+		_usage "_start $1"
+	fi
+	echo "starting $1"
+	%INSTALLDIR%/bin/supervise $1 &
+}
+# stop service by name
+_stop ( ) {
+	if [ ! -d $1 ]; then
+		_usage "_stop $1"
+	fi
+	echo "stoping $1"
+    %INSTALLDIR%/bin/svc -dx $1
+    [ -f $1/stop ] && $1/stop
+}
+
+case $1 in
+start)
+	if [ $SVCNAME == "all" ]; then
+        for service in %INSTALLDIR%/services/*; do
+            _start $service
+        done
+    else 
+        _start %INSTALLDIR%/services/$SVCNAME
+	fi
+    ;;
+stop)
+    if [ $SVCNAME == "all" ]; then
+        for service in %INSTALLDIR%/services/*; do
+            _stop $service
+        done
+        sleep 1
+        killproc %INSTALLDIR%/bin/supervise
+    else
+        _stop %INSTALLDIR%/services/$SVCNAME
+    fi
+    ;;
+status)
+    if [ $SVCNAME == "all" ]; then
+    	%INSTALLDIR%/bin/svstat %INSTALLDIR%/services/*
+    else
+        %INSTALLDIR%/bin/svstat %INSTALLDIR%/services/$SVCNAME
+    fi
+    ;;
+restart)
+    $SELF stop $2
+    sleep 1
+    $SELF start $2
+    ;;
+  *)
+    _usage
+    ;;
+esac
+exit 0

@@ -1,0 +1,15 @@
+PEARCS_VER=$(shell test "${PEARCS}" != "" && echo ${PEARCS} || echo "PHP_CodeSniffer-1.3.6")
+pear-cs-msg:
+	@echo " *** check for ${PEARCS_VER} *** "
+pear-cs: fs php-cli php-tokenizer php-dom php-simplexml php-xmlwriter php-xmlreader php-iconv pear-cs-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,pear-cs/ | grep -c ",pear-cs" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -Rf ${INSTALLDIR}/lib/php/PHP/CodeSniffer* ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/php/PHP/CodeSniffer.php ]; then \
+		echo " *** ${PEARCS_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& ${INSTALLDIR}/bin/pear install --alldeps ${PEARCS_VER} \
+		) \
+	fi
+	@echo " *** ${PEARCS_VER} installed *** "

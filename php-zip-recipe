@@ -1,0 +1,27 @@
+PHPZIP_CFG=$(shell test "${PHPZIPCONF}" != "" && echo ${PHPZIPCONF} || echo "")
+PHPZIP_CMPL=`${INSTALLDIR}/bin/php-config --configure-options | grep -c " --enable-zip" | tr -d '\n'`
+php-zip-msg:
+	@echo " *** check for PHP Zip extension *** "
+php-zip: php-cli php-zip-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-zip/ | grep -c ",php-zip" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/zip.ini ; \
+	fi
+	@if [ "${PHPZIP_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/zip.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/zip.ini ]; then \
+		echo " *** PHP Zip extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/zip \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPZIP_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=zip.so" > ${INSTALLDIR}/etc/php/conf.d/zip.ini \
+		) \
+	fi
+	@echo " *** PHP Zip extension installed *** "

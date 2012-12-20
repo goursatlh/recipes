@@ -1,0 +1,28 @@
+PHPXMLWRITER_CFG=$(shell test "${PHPXMLWRITERCONF}" != "" && echo ${PHPXMLWRITERCONF} || echo "")
+PHPXMLWRITER_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^xmlwriter" | tr -d '\n'`
+php-xmlwriter-msg:
+	@echo " *** check for PHP XMLWriter extension *** "
+php-xmlwriter: php-cli php-xmlwriter-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-xmlwriter/ | grep -c ",php-xmlwriter" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/xmlwriter.ini ; \
+	fi
+	@if [ "${PHPXMLWRITER_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/xmlwriter.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/xmlwriter.ini ]; then \
+		echo " *** PHP XMLWriter extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/xmlwriter \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config \
+				--with-libxml-dir=${TARGETDIR} ${PHPXMLWRITER_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=xmlwriter.so" > ${INSTALLDIR}/etc/php/conf.d/xmlwriter.ini \
+		) \
+	fi
+	@echo " *** PHP XMLWriter extension installed *** "

@@ -1,0 +1,37 @@
+PHP_VER=$(shell test "${PHP}" != "" && echo ${PHP} || echo "php-5.4.8")
+PHP_URL=$(shell test "${PHPURL}" != "" && echo ${PHPURL} || echo "http://de.php.net/get/${PHP_VER}.tar.gz/from/this/mirror")
+PHP_CFG=$(shell test "${PHPCONF}" != "" && echo ${PHPCONF} || echo "")
+php-cli-msg:
+	@echo " *** check for ${PHP_VER} *** "
+php-cli: fs zlib libxml2 php-cli-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-cli/ | grep -c ",php-cli" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/bin/php ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/php ]; then \
+		echo " *** ${PHP_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER} \
+			&& mkdir -p ${INSTALLDIR}/etc/php ${INSTALLDIR}/etc/php/conf.d \
+			&& ./configure \
+				--prefix=${INSTALLDIR} \
+				--disable-all \
+				--disable-cgi \
+				--with-config-file-path=${INSTALLDIR}/etc/php \
+				--with-config-file-scan-dir=${INSTALLDIR}/etc/php/conf.d \
+				--with-libxml-dir=${INSTALLDIR} \
+				--enable-libxml \
+				--enable-xml \
+				--with-zlib=${INSTALLDIR} \
+				--enable-mysqlnd \
+				--enable-pdo \
+				--with-pear \
+				--without-iconv ${PHP_CFG} \
+			&& make \
+			&& make install \
+			&& echo "date.timezone = Europe/Berlin" > ${INSTALLDIR}/etc/php/conf.d/date.ini \
+		) \
+	fi
+	@echo " *** ${PHP_VER} installed *** "
