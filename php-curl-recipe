@@ -1,0 +1,34 @@
+PHPCURL_CFG=$(shell test "${PHPCURLCONF}" != "" && echo ${PHPCURLCONF} || echo "")
+PHPCURL_CMPL=`${INSTALLDIR}/bin/php-config --configure-options | grep -c " --with-curl" | tr -d '\n'`
+php-curl-msg:
+	@echo " *** check for PHP CURL extension *** "
+php-curl-deps: fs
+	-@PHPCURLWITHCURL=`echo "${PHPHTTP_CFG}" | grep -c "--with-curl=" | tr -d '\n'` ; \
+	if [ "$${PHPCURLWITHCURL}" = "0" ]; then \
+		make curl \
+	fi
+	@make php-cli
+php-curl: php-curl-deps php-curl-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-curl/ | grep -c ",php-curl" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/curl.ini ; \
+	fi
+	@if [ "${PHPCURL_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/curl.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/curl.ini ]; then \
+		echo " *** PHP CURL extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/curl \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config \
+				--with-curl=${INSTALLDIR} ${PHPCURL_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=curl.so" > ${INSTALLDIR}/etc/php/conf.d/curl.ini \
+		) \
+	fi
+	@echo " *** PHP CURL extension installed *** "

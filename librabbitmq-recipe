@@ -1,0 +1,25 @@
+LIBRABBITMQ_VER=$(shell test "${LIBRABBITMQ}" != "" && echo ${LIBRABBITMQ} || echo "rabbitmq-c")
+LIBRABBITMQ_URL=$(shell test "${LIBRABBITMQURL}" != "" && echo ${LIBRABBITMQURL} || echo "https://github.com/downloads/recipes/recipes/${LIBRABBITMQ_VER}.tar.gz")
+LIBRABBITMQ_CFG=$(shell test "${LIBRABBITMQCONF}" != "" && echo ${LIBRABBITMQCONF} || echo "")
+librabbitmq-msg:
+	@echo " *** check for ${LIBRABBITMQ_VER} *** "
+librabbitmq: fs librabbitmq-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,librabbitmq/ | grep -c ",librabbitmq" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/librabbitmq.la ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/librabbitmq.la ]; then \
+		echo " *** ${LIBRABBITMQ_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBRABBITMQ_URL} ${INSTALLDIR}/tmp ${LIBRABBITMQ_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBRABBITMQ_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${LIBRABBITMQ_VER} \
+			&& autoreconf -i \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${LIBRABBITMQ_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBRABBITMQ_VER} \
+		) \
+	fi
+	@echo " *** ${LIBRABBITMQ_VER} installed *** "

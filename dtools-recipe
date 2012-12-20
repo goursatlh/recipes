@@ -1,0 +1,49 @@
+DAEMONTOOLS="daemontools-0.76"
+DAEMONTOOLSURL="http://cr.yp.to/daemontools/daemontools-0.76.tar.gz"
+SUPERVISORCTLURL="https://github.com/downloads/recipes/recipes/supervisorctl"
+dtools-msg:
+	@echo " *** check for ${DAEMONTOOLS} *** "
+dtools: fs dtools-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,dtools/ | grep -c ",dtools" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/bin/supervise ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/supervise ]; then \
+		echo " *** ${DAEMONTOOLS} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${DAEMONTOOLSURL} ${INSTALLDIR}/tmp ${DAEMONTOOLS}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${DAEMONTOOLS}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/admin/${DAEMONTOOLS} \
+			&& sed -e "s#extern int errno;#\#include <errno.h>#" \
+				src/error.h > src/error.h.new \
+			&& mv src/error.h.new src/error.h \
+			&& sed -e "s# command/# ${INSTALLDIR}/bin/#g" \
+				package/compile > package/compile.new \
+			&& mv package/compile.new package/compile \
+			&& chmod 0755 package/compile \
+			&& echo "#!/bin/sh -e" > package/upgrade \
+			&& echo "#!/bin/sh -e" > package/run \
+			&& package/install \
+			&& rm -Rf ${INSTALLDIR}/tmp/admin \
+		) \
+	fi
+	@echo " *** ${DAEMONTOOLS} installed *** "
+	@make supervisorctl
+supervisorctl:
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,supervisorctl/ | grep -c ",supervisorctl" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/bin/supervisorctl ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/supervisorctl ]; then \
+		echo " *** supervisorctl will be installed *** " \
+		&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${SUPERVISORCTLURL} ${INSTALLDIR}/tmp supervisorctl\
+		&& (cd ${INSTALLDIR}/tmp \
+			&& sed -e "s#%INSTALLDIR%#${INSTALLDIR}#g" \
+				-e "s#%VERSION%#${VERSION}#g" \
+				-e "s#ulimit -n 16384##g" \
+				${INSTALLDIR}/tmp/supervisorctl > ${INSTALLDIR}/bin/supervisorctl \
+			&& chmod +x ${INSTALLDIR}/bin/supervisorctl \
+			&& rm ${INSTALLDIR}/tmp/supervisorctl \
+		) \
+	fi
+	@echo " *** supervisorctl installed *** "

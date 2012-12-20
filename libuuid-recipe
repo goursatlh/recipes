@@ -1,0 +1,25 @@
+LIBUUID_VER=$(shell test "${LIBUUID}" != "" && echo ${LIBUUID} || echo "e2fsprogs-libs-1.42.6")
+LIBUUID_URL=$(shell test "${LIBUUIDURL}" != "" && echo ${LIBUUIDURL} || echo "https://github.com/downloads/recipes/recipes/${LIBUUID_VER}.tar.gz")
+LIBUUID_CFG=$(shell test "${LIBUUIDCONF}" != "" && echo ${LIBUUIDCONF} || echo "")
+libuuid-msg:
+	@echo " *** check for UUID library *** "
+libuuid: fs libuuid-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libuuid/ | grep -c ",libuuid" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libuuid.a ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libuuid.a ]; then \
+		echo " *** UUID library will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBUUID_URL} ${INSTALLDIR}/tmp ${LIBUUID_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBUUID_VER}.tar.gz | tar xf - \
+			&& cd ${LIBUUID_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} --disable-tls ${LIBUUID_CFG} \
+			&& rm -Rf lib/et lib/ss lib/quota lib/blkid \
+			&& make libs \
+			&& make install-libs \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBUUID_VER} \
+		) \
+	fi
+	@echo " *** UUID library installed *** "

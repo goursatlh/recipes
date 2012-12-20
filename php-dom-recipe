@@ -1,0 +1,28 @@
+PHPDOM_CFG=$(shell test "${PHPDOMCONF}" != "" && echo ${PHPDOMCONF} || echo "")
+PHPDOM_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^dom" | tr -d '\n'`
+php-dom-msg:
+	@echo " *** check for PHP DOM extension *** "
+php-dom: fs php-cli php-dom-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-dom/ | grep -c ",php-dom" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/dom.ini ; \
+	fi
+	@if [ "${PHPDOM_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/dom.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/dom.ini ]; then \
+		echo " *** PHP DOM extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/dom \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config \
+				--with-libxml-dir=${TARGETDIR} ${PHPDOM_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=dom.so" > ${INSTALLDIR}/etc/php/conf.d/dom.ini \
+		) \
+	fi
+	@echo " *** PHP DOM extension installed *** "

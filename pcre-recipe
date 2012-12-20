@@ -1,0 +1,24 @@
+PCRE_VER=$(shell test "${PCRE}" != "" && echo ${PCRE} || echo "pcre-8.31")
+PCRE_URL=$(shell test "${PCREURL}" != "" && echo ${PCREURL} || echo "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/${PCRE_VER}.tar.gz")
+PCRE_CFG=$(shell test "${PCRECONF}" != "" && echo ${PCRECONF} || echo "")
+pcre-msg:
+	@echo " *** check for ${PCRE_VER} *** "
+pcre: fs pcre-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,pcre/ | grep -c ",pcre" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libpcre.la ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libpcre.la ]; then \
+		echo " *** ${PCRE_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PCRE_URL} ${INSTALLDIR}/tmp ${PCRE_VER}.tar.gz \
+			&& gunzip -c ${INSTALLDIR}/tmp/${PCRE_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PCRE_VER} \
+			&& ./configure\
+				--prefix=${INSTALLDIR} ${PCRE_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${PCRE_VER} \
+		) \
+	fi
+	@echo " *** ${PCRE_VER} installed *** "

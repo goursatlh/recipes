@@ -1,0 +1,27 @@
+PHPSOAP_CFG=$(shell test "${PHPSOAPCONF}" != "" && echo ${PHPSOAPCONF} || echo "")
+PHPSOAP_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^soap" | tr -d '\n'`
+php-soap-msg:
+	@echo " *** check for PHP SOAP extension *** "
+php-soap: fs php-cli php-soap-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-soap/ | grep -c ",php-soap" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/soap.ini ; \
+	fi
+	@if [ "${PHPSOAP_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/soap.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/soap.ini ]; then \
+		echo " *** PHP SOAP extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/soap \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPSOAP_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=soap.so" > ${INSTALLDIR}/etc/php/conf.d/soap.ini \
+		) \
+	fi
+	@echo " *** PHP SOAP extension installed *** "

@@ -1,0 +1,27 @@
+PHPZLIB_CFG=$(shell test "${PHPZLIBCONF}" != "" && echo ${PHPZLIBCONF} || echo "")
+PHPZLIB_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^zlib" | tr -d '\n'`
+php-zlib-msg:
+	@echo " *** check for PHP Zlib Compression (zlib) extension *** "
+php-zlib: php-cli php-zlib-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-zlib/ | grep -c ",php-zlib" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/zlib.ini ; \
+	fi
+	@if [ "${PHPZLIB_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/zlib.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/zlib.ini ]; then \
+		echo " *** PHP Zlib Compression (zlib) extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzlib -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/zlib \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPZLIB_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=zlib.so" > ${INSTALLDIR}/etc/php/conf.d/zlib.ini \
+		) \
+	fi
+	@echo " *** PHP Zlib Compression (zlib) extension installed *** "

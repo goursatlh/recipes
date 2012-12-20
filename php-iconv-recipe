@@ -1,0 +1,28 @@
+PHPICONV_CFG=$(shell test "${PHPICONVCONF}" != "" && echo ${PHPICONVCONF} || echo "")
+PHPICONV_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^iconv" | tr -d '\n'`
+php-iconv-msg:
+	@echo " *** check for PHP Iconv extension *** "
+php-iconv: php-cli libiconv php-iconv-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-iconv/ | grep -c ",php-iconv" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/iconv.ini ; \
+	fi
+	@if [ "${PHPICONV_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/iconv.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/iconv.ini ]; then \
+		echo " *** PHP Iconv extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/iconv \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config \
+				--with-iconv=${INSTALLDIR} ${PHPICONV_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=iconv.so" > ${INSTALLDIR}/etc/php/conf.d/iconv.ini \
+		) \
+	fi
+	@echo " *** PHP Iconv extension installed *** "

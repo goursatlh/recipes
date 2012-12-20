@@ -1,0 +1,24 @@
+IMAGEMAGICK_VER=$(shell test "${IMAGEMAGICK}" != "" && echo ${IMAGEMAGICK} || echo "ImageMagick-6.8.0-2")
+IMAGEMAGICK_URL=$(shell test "${IMAGEMAGICKURL}" != "" && echo ${IMAGEMAGICKURL} || echo "http://mirror.checkdomain.de/imagemagick/${IMAGEMAGICK_VER}.tar.gz")
+IMAGEMAGICK_CFG=$(shell test "${IMAGEMAGICKCONF}" != "" && echo ${IMAGEMAGICKCONF} || echo "")
+imagemagick-msg:
+	@echo " *** check for ${IMAGEMAGICK_VER} *** "
+imagemagick: fs imagemagick-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,imagemagick/ | grep -c ",imagemagick" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libMagickCore.la ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libMagickCore.la ]; then \
+		echo " *** ${IMAGEMAGICK_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${IMAGEMAGICK_URL} ${INSTALLDIR}/tmp ${IMAGEMAGICK_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${IMAGEMAGICK_VER}.tar.gz | tar xf - \
+			&& cd ${IMAGEMAGICK_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${IMAGEMAGICK_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${IMAGEMAGICK_VER} \
+		) \
+	fi
+	@echo " *** ${IMAGEMAGICK_VER} installed *** "

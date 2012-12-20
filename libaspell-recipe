@@ -1,0 +1,24 @@
+LIBASPELL_VER=$(shell test "${LIBASPELL}" != "" && echo ${LIBASPELL} || echo "aspell-0.60.6.1")
+LIBASPELL_URL=$(shell test "${LIBASPELLURL}" != "" && echo ${LIBASPELLURL} || echo "ftp://ftp.gnu.org/gnu/aspell/${LIBASPELL_VER}.tar.gz")
+LIBASPELL_CFG=$(shell test "${LIBASPELLCONF}" != "" && echo ${LIBASPELLCONF} || echo "")
+libaspell-msg:
+	@echo " *** check for ${LIBASPELL_VER} *** "
+libaspell: fs libaspell-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libaspell/ | grep -c ",libaspell" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libaspell.la ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libaspell.la ]; then \
+		echo " *** ${LIBASPELL_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBASPELL_URL} ${INSTALLDIR}/tmp ${LIBASPELL_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBASPELL_VER}.tar.gz | tar xf - \
+			&& cd ${LIBASPELL_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${LIBASPELL_CFG} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBASPELL_VER} \
+		) \
+	fi
+	@echo " *** ${LIBASPELL_VER} installed *** "

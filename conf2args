@@ -1,0 +1,27 @@
+#!/usr/bin/perl -w
+
+my $params; my $confhandle; my $conffile = $ARGV[0];
+
+if (!$conffile) {
+    print STDERR "Missing argument.\nUSAGE: conf2args.sh <CONFIG_FILE>\n";
+    exit;
+}
+
+if(open $confhandle, $conffile)
+{
+	foreach my $line (<$confhandle>)
+	{
+		$line ||= "";
+		$line =~ s/\#.*//g;
+		$line =~ s/\s+$//g;
+		$line =~ s/^\s+//g;
+		next unless $line;
+		push @$params, $line;		
+	}
+} else{
+	$params = [];
+}
+
+$params = join " ", @$params;
+
+print $params;

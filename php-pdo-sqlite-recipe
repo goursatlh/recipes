@@ -1,0 +1,27 @@
+PHPPDOSQLITE_CFG=$(shell test "${PHPPDOSQLITECONF}" != "" && echo ${PHPPDOSQLITECONF} || echo "")
+PHPPDOSQLITE_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^pdo_sqlite" | tr -d '\n'`
+php-pdo-sqlite-msg:
+	@echo " *** check for PHP PDO Sqlite (pdo-sqlite) extension *** "
+php-pdo-sqlite: php-cli php-pdo-sqlite-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-pdo-sqlite/ | grep -c ",php-pdo-sqlite" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/pdo-sqlite.ini ; \
+	fi
+	@if [ "${PHPPDOSQLITE_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/pdo-sqlite.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/pdo-sqlite.ini ]; then \
+		echo " *** PHP PDO Sqlite (pdo-sqlite) extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/pdo_sqlite \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPPDOSQLITE_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=pdo_sqlite.so" > ${INSTALLDIR}/etc/php/conf.d/pdo-sqlite.ini \
+		) \
+	fi
+	@echo " *** PHP PDO Sqlite (pdo-sqlite) extension installed *** "

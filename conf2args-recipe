@@ -1,0 +1,13 @@
+CONF2ARGSURL="https://github.com/downloads/recipes/recipes/conf2args"
+conf2args:
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,conf2args/ | grep -c ",conf2args" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/bin/conf2args ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/conf2args ]; then \
+		echo " *** conf2args will be installed *** " \
+		&& ($(SHELL) ${INSTALLDIR}/tmp/download.sh ${CONF2ARGSURL} ${INSTALLDIR}/bin conf2args \
+			&& chmod +x ${INSTALLDIR}/bin/conf2args \
+		) \
+	fi
+	@echo " *** conf2args installed *** "

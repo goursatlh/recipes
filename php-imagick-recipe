@@ -1,0 +1,27 @@
+PHPIMAGICK_VER=$(shell test "${PHPIMAGICK}" != "" && echo ${PHPIMAGICK} || echo "imagick-3.1.0RC2")
+PHPIMAGICK_URL=$(shell test "${PHPIMAGICKURL}" != "" && echo ${PHPIMAGICKURL} || echo "http://pecl.php.net/get/${PHPIMAGICK_VER}.tgz")
+PHPIMAGICK_CFG=$(shell test "${PHPIMAGICKCONF}" != "" && echo ${PHPIMAGICKCONF} || echo "")
+php-imagick-msg:
+	@echo " *** check for ${PHPIMAGICK_VER} PHP extension *** "
+php-imagick: fs php-cli imagemagick php-imagick-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-imagick/ | grep -c ",php-imagick" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/imagick.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/imagick.ini ]; then \
+		echo " *** ${PHPIMAGICK_VER} PHP extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHPIMAGICK_URL} ${INSTALLDIR}/tmp ${PHPIMAGICK_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHPIMAGICK_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHPIMAGICK_VER} \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config \
+				--with-imagick=${INSTALLDIR} ${PHPIMAGICK_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=imagick.so" > ${INSTALLDIR}/etc/php/conf.d/imagick.ini \
+			&& rm -Rf ${INSTALLDIR}/tmp/${PHPIMAGICK_VER} \
+		) \
+	fi
+	@echo " *** ${PHPIMAGICK_VER} PHP extension installed *** "

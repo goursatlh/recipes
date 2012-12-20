@@ -1,0 +1,28 @@
+PHPXMLREADER_CFG=$(shell test "${PHPXMLREADERCONF}" != "" && echo ${PHPXMLREADERCONF} || echo "")
+PHPXMLREADER_CMPL=`${INSTALLDIR}/bin/php -m | grep -c "^xmlreader" | tr -d '\n'`
+php-xmlreader-msg:
+	@echo " *** check for PHP XMLReader extension *** "
+php-xmlreader: php-cli php-xmlreader-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-xmlreader/ | grep -c ",php-xmlreader" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/xmlreader.ini ; \
+	fi
+	@if [ "${PHPXMLREADER_CMPL}" = "1" ]; then \
+		echo "; compiled in module" > ${INSTALLDIR}/etc/php/conf.d/xmlreader.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/xmlreader.ini ]; then \
+		echo " *** PHP XMLReader extension will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHP_VER}/ext/xmlreader \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config \
+				--with-libxml-dir=${TARGETDIR} ${PHPXMLREADER_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=xmlreader.so" > ${INSTALLDIR}/etc/php/conf.d/xmlreader.ini \
+		) \
+	fi
+	@echo " *** PHP XMLReader extension installed *** "

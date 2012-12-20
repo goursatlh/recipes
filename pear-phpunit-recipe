@@ -1,0 +1,16 @@
+pear-phpunit-msg:
+	@echo " *** check for PEAR PHPUnit *** "
+pear-phpunit: fs php-cli php-tokenizer php-pcntl php-json pear-phpunit-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,pear-phpunit/ | grep -c ",pear-phpunit" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -Rf ${INSTALLDIR}/lib/php/.registry/.channel.pear.phpunit.de ${INSTALLDIR}/lib/php/PHPUnit ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/php/PHPUnit/Autoload.php ]; then \
+		echo " *** PEAR PHPUnit will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& ${INSTALLDIR}/bin/pear config-set auto_discover 1 \
+			&& ${INSTALLDIR}/bin/pear install --alldeps pear.phpunit.de/PHPUnit \
+			&& ${INSTALLDIR}/bin/pear install pear.phpunit.de/PHPUnit_SkeletonGenerator \
+		) \
+	fi
+	@echo " *** PEAR PHPUnit installed *** "

@@ -1,0 +1,24 @@
+ZLIB_VER=$(shell test "${ZLIB}" != "" && echo ${ZLIB} || echo "zlib-1.2.7")
+ZLIB_URL=$(shell test "${ZLIBURL}" != "" && echo ${ZLIBURL} || echo "http://zlib.net/${ZLIB_VER}.tar.gz")
+ZLIB_CFG=$(shell test "${ZLIBCONF}" != "" && echo ${ZLIBCONF} || echo "")
+zlib-msg:
+	@echo " *** check for ${ZLIB_VER} *** "
+zlib: fs zlib-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,zlib/ | grep -c ",zlib" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libz.a ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libz.a ]; then \
+		echo " *** ${ZLIB_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${ZLIB_URL} ${INSTALLDIR}/tmp ${ZLIB_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${ZLIB_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${ZLIB_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${ZLIB_VER} \
+		) \
+	fi
+	@echo " *** ${ZLIB_VER} installed *** "

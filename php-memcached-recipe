@@ -1,0 +1,28 @@
+PHPMEMCACHED_VER=$(shell test "${PHPMEMCACHED}" != "" && echo ${PHPMEMCACHED} || echo "memcached-2.1.0")
+PHPMEMCACHED_URL=$(shell test "${PHPMEMCACHEDURL}" != "" && echo ${PHPMEMCACHEDURL} || echo "http://pecl.php.net/get/${PHPMEMCACHED_VER}.tgz")
+PHPMEMCACHED_CFG=$(shell test "${PHPMEMCACHEDCONF}" != "" && echo ${PHPMEMCACHEDCONF} || echo "")
+php-memcached-msg:
+	@echo " *** check for ${PHPMEMCACHED_VER} *** "
+php-memcached: fs php-cli libmemcached php-memcached-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-memcached/ | grep -c ",php-memcached" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/xmemcached.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/xmemcached.ini ]; then \
+		echo " *** ${PHPMEMCACHED_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHPMEMCACHED_URL} ${INSTALLDIR}/tmp ${PHPMEMCACHED_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHPMEMCACHED_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHPMEMCACHED_VER} \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config \
+				--with-libmemcached-dir=${INSTALLDIR} \
+				--with-zlib-dir=${INSTALLDIR} ${PHPMEMCACHED_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=memcached.so" > ${INSTALLDIR}/etc/php/conf.d/xmemcached.ini \
+			&& rm -Rf ${INSTALLDIR}/tmp/${PHPMEMCACHED_VER} \
+		) \
+	fi
+	@echo " *** ${PHPMEMCACHED_VER} installed *** "

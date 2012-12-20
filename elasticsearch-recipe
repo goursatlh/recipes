@@ -1,0 +1,32 @@
+ELASTICSEARCH_VER=$(shell test "${ELASTICSEARCH}" != "" && echo ${ELASTICSEARCH} || echo "elasticsearch-0.19.9")
+ELASTICSEARCH_URL=$(shell test "${ELASTICSEARCHURL}" != "" && echo ${ELASTICSEARCHURL} || echo "https://github.com/downloads/elasticsearch/elasticsearch/${ELASTICSEARCH_VER}.tar.gz")
+elasticsearch-msg:
+	@echo " *** check for ${ELASTICSEARCH_VER} *** "
+elasticsearch: java elasticsearch-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,elasticsearch/ | grep -c ",elasticsearch" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -Rf ${INSTALLDIR}/bin/elasticsearch ; \
+	fi
+	@if [ ! -d ${INSTALLDIR}/bin/elasticsearch ]; then \
+		echo " *** ${ELASTICSEARCH_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${ELASTICSEARCH_URL} ${INSTALLDIR}/tmp ${ELASTICSEARCH_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${ELASTICSEARCH_VER}.tar.gz | tar xf - \
+			&& mv ${INSTALLDIR}/tmp/${ELASTICSEARCH_VER} ${INSTALLDIR}/bin/elasticsearch \
+		) \
+	fi
+	@echo " *** ${ELASTICSEARCH_VER} installed *** "
+	@make elasticsearch-supervise-service
+	
+elasticsearch-supervise-service: dtools
+	@echo " *** elasticsearch supervise service will be installed *** "
+	@mkdir -p ${INSTALLDIR}/services/elasticsearch/supervise
+	@echo "#!/bin/sh" > ${INSTALLDIR}/services/elasticsearch/run
+	@echo "export PATH=${INSTALLDIR}/bin:\$$PATH" >> ${INSTALLDIR}/services/elasticsearch/run
+	@echo "export ES_HOME=${INSTALLDIR}/bin/elasticsearch" >> ${INSTALLDIR}/services/elasticsearch/run
+	@echo "export ES_CLASSPATH=\$$ES_CLASSPATH:\$$ES_HOME/lib/*:\$$ES_HOME/lib/sigar/*" >> ${INSTALLDIR}/services/elasticsearch/run
+	@echo "exec ${INSTALLDIR}/bin/setuidgid ${USER} ${INSTALLDIR}/bin/elasticsearch/bin/elasticsearch -f \\" >> ${INSTALLDIR}/services/elasticsearch/run
+	@echo "     > ${INSTALLDIR}/var/log/elasticsearch.log" >> ${INSTALLDIR}/services/elasticsearch/run
+	@chmod 700 ${INSTALLDIR}/services/elasticsearch/supervise
+	@chmod 755 ${INSTALLDIR}/services/elasticsearch/run
+	@echo " *** elasticsearch supervise service files installed *** "

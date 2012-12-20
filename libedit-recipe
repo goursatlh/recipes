@@ -1,0 +1,24 @@
+LIBEDIT_VER=$(shell test "${LIBEDIT}" != "" && echo ${LIBEDIT} || echo "libedit-20120601-3.0")
+LIBEDIT_URL=$(shell test "${LIBEDITURL}" != "" && echo ${LIBEDITURL} || echo "http://www.thrysoee.dk/editline/${LIBEDIT_VER}.tar.gz")
+LIBEDIT_CFG=$(shell test "${LIBEDITCONF}" != "" && echo ${LIBEDITCONF} || echo "")
+libedit-msg:
+	@echo " *** check for ${LIBEDIT_VER} *** "
+libedit: fs ncurses libedit-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libedit/ | grep -c ",libedit" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/lib/libedit.la ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/lib/libedit.la ]; then \
+		echo " *** ${LIBEDIT_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${LIBEDIT_URL} ${INSTALLDIR}/tmp ${LIBEDIT_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${LIBEDIT_VER}.tar.gz | tar xf - \
+			&& cd ${LIBEDIT_VER} \
+			&& ./configure \
+				--prefix=${INSTALLDIR} ${LIBEDIT_CFG} LDFLAGS=-L${INSTALLDIR}/lib \
+			&& make \
+			&& make install \
+			&& rm -Rf ${INSTALLDIR}/tmp/${LIBEDIT_VER} \
+		) \
+	fi
+	@echo " *** ${LIBEDIT_VER} installed *** "

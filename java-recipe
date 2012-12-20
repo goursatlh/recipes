@@ -1,0 +1,23 @@
+JAVA_VER=$(shell test "${JAVA}" != "" && echo ${JAVA} || echo "jre-7u7-linux-"$(shell uname -m))
+JAVA_URL=$(shell test "${JAVAURL}" != "" && echo ${JAVAURL} || echo "https://github.com/downloads/recipes/recipes/${JAVA_VER}.tar.gz")
+java-msg:
+	@echo " *** Check for ${JAVA_VER} *** "
+java: fs java-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,java/ | grep -c ",java" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/bin/java ; \
+		rm -Rf ${INSTALLDIR}/bin/jre ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/bin/java ]; then \
+		echo " *** ${JAVA_VER} will be installed *** " \
+		&& make java-${OSTYPE} ; \
+	fi
+	@echo " *** ${JAVA_VER} installed *** "
+java-Darwin:
+	-@ln -s /usr/bin/java ${INSTALLDIR}/bin/java
+java-Linux:
+	-@cd ${INSTALLDIR}/tmp \
+		&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${JAVA_URL} ${INSTALLDIR}/tmp ${JAVA_VER}.tar.gz\
+		&& gunzip -c ${INSTALLDIR}/tmp/${JAVA_VER}.tar.gz | tar xf - \
+		&& mv ${INSTALLDIR}/tmp/jre1* ${INSTALLDIR}/jre \
+		&& ln -s ${INSTALLDIR}/jre/bin/java ${INSTALLDIR}/bin/java

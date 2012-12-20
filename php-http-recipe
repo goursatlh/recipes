@@ -1,0 +1,40 @@
+PHPHTTP_VER=$(shell test "${PHPHTTP}" != "" && echo ${PHPHTTP} || echo "pecl_http-1.7.4")
+PHPHTTP_URL=$(shell test "${PHPHTTPURL}" != "" && echo ${PHPHTTPURL} || echo "http://pecl.php.net/get/${PHPHTTP_VER}.tgz")
+PHPHTTP_CFG=$(shell test "${PHPHTTPCONF}" != "" && echo ${PHPHTTPCONF} || echo "")
+php-http-msg:
+	@echo " *** check for ${PHPHTTP_VER} *** "
+php-http-deps: fs
+	-@PHPHTTPWITHCURL=`echo "${PHPHTTP_CFG}" | grep -c "--with-http-curl-requests=" | tr -d '\n'` ; \
+	if [ "$${PHPHTTPWITHCURL}" = "0" ]; then \
+		make curl \
+	fi
+	-@PHPHTTPWITHLIBEVENT=`echo "${PHPHTTP_CFG}" | grep -c "--with-http-curl-libevent=" | tr -d '\n'` ; \
+	if [ "$${PHPHTTPWITHLIBEVENT}" = "0" ]; then \
+		make libevent \
+	fi
+	@make php-cli
+php-http: php-http-deps php-http-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-http/ | grep -c ",php-http" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/http.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/http.ini ]; then \
+		echo " *** ${PHPHTTP_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHPHTTP_URL} ${INSTALLDIR}/tmp ${PHPHTTP_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/${PHPHTTP_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/${PHPHTTP_VER} \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--enable-http \
+				--with-http-curl-requests=${INSTALLDIR} \
+				--with-http-curl-libevent=${INSTALLDIR} \
+				--with-http-zlib-compression=${INSTALLDIR} \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPHTTP_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=http.so" > ${INSTALLDIR}/etc/php/conf.d/http.ini \
+			&& rm -Rf ${INSTALLDIR}/tmp/${PHPHTTP_VER} \
+		) \
+	fi
+	@echo " *** ${PHPHTTP_VER} installed *** "

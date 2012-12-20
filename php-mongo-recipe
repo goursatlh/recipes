@@ -1,0 +1,26 @@
+PHPMONGO_VER=$(shell test "${PHPMONGO}" != "" && echo ${PHPMONGO} || echo "1.2.12")
+PHPMONGO_URL=$(shell test "${PHPMONGOURL}" != "" && echo ${PHPMONGOURL} || echo "https://github.com/mongodb/mongo-php-driver/tarball/${PHPMONGO_VER}")
+PHPMONGO_CFG=$(shell test "${PHPMONGOCONF}" != "" && echo ${PHPMONGOCONF} || echo "")
+php-mongo-msg:
+	@echo " *** check for phpmongo-${PHPMONGO_VER} *** "
+php-mongo: fs php-cli php-mongo-msg
+	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-mongo/ | grep -c ",php-mongo" | tr -d '\n'` ; \
+	if [ "$${INSTR}" = "1" ]; then \
+		rm -f ${INSTALLDIR}/etc/php/conf.d/mongo.ini ; \
+	fi
+	@if [ ! -f ${INSTALLDIR}/etc/php/conf.d/mongo.ini ]; then \
+		echo " *** phpmongo-${PHPMONGO_VER} will be installed *** " \
+		&& (cd ${INSTALLDIR}/tmp \
+			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHPMONGO_URL} ${INSTALLDIR}/tmp phpmongo-${PHPMONGO_VER}.tar.gz\
+			&& gunzip -c ${INSTALLDIR}/tmp/phpmongo-${PHPMONGO_VER}.tar.gz | tar xf - \
+			&& cd ${INSTALLDIR}/tmp/mongodb-mongo-php-driver-* \
+			&& ${INSTALLDIR}/bin/phpize \
+			&& ./configure \
+				--with-php-config=${INSTALLDIR}/bin/php-config ${PHPMONGO_CFG} \
+			&& make \
+			&& make install \
+			&& echo "extension=mongo.so" > ${INSTALLDIR}/etc/php/conf.d/mongo.ini \
+			&& rm -Rf ${INSTALLDIR}/tmp/mongodb-mongo-php-driver--* \
+		) \
+	fi
+	@echo " *** phpmongo-${PHPMONGO_VER} installed *** "
