@@ -3,7 +3,13 @@ LIBMEMCACHED_URL=$(shell test "${LIBMEMCACHEDURL}" != "" && echo ${LIBMEMCACHEDU
 LIBMEMCACHED_CFG=$(shell test "${LIBMEMCACHEDCONF}" != "" && echo ${LIBMEMCACHEDCONF} || echo "")
 libmemcached-msg:
 	@echo " *** check for ${LIBMEMCACHED_VER} *** "
-libmemcached: fs memcached libmemcached-msg
+libmemcached-deps: fs
+	-@MEMCACHEDBIN=`echo "${LIBMEMCACHED_CFG}" | grep -c "--with-memcached=" | tr -d '\n'` ; \
+	if [ "$${MEMCACHEDBIN}" = "0" ]; then \
+		make memcached \
+	fi
+	@make php-cli
+libmemcached: libmemcached-deps libmemcached-msg
 	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libmemcached/ | grep -c ",libmemcached" | tr -d '\n'` ; \
 	if [ "$${INSTR}" = "1" ]; then \
 		rm -f ${INSTALLDIR}/lib/libmemcached.a ; \
@@ -15,8 +21,8 @@ libmemcached: fs memcached libmemcached-msg
 			&& gunzip -c ${INSTALLDIR}/tmp/${LIBMEMCACHED_VER}.tar.gz | tar xf - \
 			&& cd ${INSTALLDIR}/tmp/${LIBMEMCACHED_VER} \
 			&& ./configure \
-				--prefix=${INSTALLDIR} ${LIBMEMCACHED_CFG} \
-				--with-memcached=${INSTALLDIR}/bin/memcached \
+				--prefix=${INSTALLDIR} \
+				--with-memcached=${INSTALLDIR}/bin/memcached ${LIBMEMCACHED_CFG} \
 			&& make \
 			&& make install \
 			&& rm -Rf ${INSTALLDIR}/tmp/${LIBMEMCACHED_VER} \

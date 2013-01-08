@@ -3,7 +3,7 @@ PHPCURL_CMPL=`${INSTALLDIR}/bin/php-config --configure-options | grep -c " --wit
 php-curl-msg:
 	@echo " *** check for PHP CURL extension *** "
 php-curl-deps: fs
-	-@PHPCURLWITHCURL=`echo "${PHPHTTP_CFG}" | grep -c "--with-curl=" | tr -d '\n'` ; \
+	-@PHPCURLWITHCURL=`echo "${PHPCURL_CFG}" | grep -c "--with-curl=" | tr -d '\n'` ; \
 	if [ "$${PHPCURLWITHCURL}" = "0" ]; then \
 		make curl \
 	fi
