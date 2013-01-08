@@ -3,7 +3,12 @@ PHP_URL=$(shell test "${PHPURL}" != "" && echo ${PHPURL} || echo "http://de.php.
 PHP_CFG=$(shell test "${PHPCONF}" != "" && echo ${PHPCONF} || echo "")
 php-apache-msg:
 	@echo " *** check for ${PHP_VER} Apache module *** "
-php-apache: fs zlib libxml2 apache php-apache-msg
+php-apache-deps: fs zlib libxml2
+	-@APXS2=`echo "${PHP_CFG}" | grep -c "--with-apxs2=" | tr -d '\n'` ; \
+	if [ "$${APXS2}" = "0" ]; then \
+		make apache \
+	fi
+php-apache: php-apache-deps php-apache-msg
 	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-apache/ | grep -c ",php-apache" | tr -d '\n'` ; \
 	if [ "$${INSTR}" = "1" ]; then \
 		rm -f ${INSTALLDIR}/apache/modules/libphp5.so ; \

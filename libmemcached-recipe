@@ -8,7 +8,6 @@ libmemcached-deps: fs
 	if [ "$${MEMCACHEDBIN}" = "0" ]; then \
 		make memcached \
 	fi
-	@make php-cli
 libmemcached: libmemcached-deps libmemcached-msg
 	-@INSTR=`echo "${FORCE}" | sed s/force-all/,libmemcached/ | grep -c ",libmemcached" | tr -d '\n'` ; \
 	if [ "$${INSTR}" = "1" ]; then \
