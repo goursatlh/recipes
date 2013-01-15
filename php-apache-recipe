@@ -1,19 +1,25 @@
 PHP_VER=$(shell test "${PHP}" != "" && echo ${PHP} || echo "php-5.4.8")
 PHP_URL=$(shell test "${PHPURL}" != "" && echo ${PHPURL} || echo "http://de.php.net/get/${PHP_VER}.tar.gz/from/this/mirror")
 PHP_CFG=$(shell test "${PHPCONF}" != "" && echo ${PHPCONF} || echo "")
+PHP_VER=$(shell test "${PHP}" != "" && echo ${PHP} || echo "php-5.4.10")
+PHP_URL=$(shell test "${PHPURL}" != "" && echo ${PHPURL} || echo "http://de.php.net/get/${PHP_VER}.tar.gz/from/this/mirror")
+PHP_CFG=$(shell test "${PHPCONF}" != "" && echo ${PHPCONF} || echo "")
+APXS=$(shell echo "${PHP_CFG}" | grep -e "--with-apxs2=[^ ]\+" -o | sed "s/--with-apxs2=//" | tr -d '\n')
+APXSBIN=$(shell test "${APXS}" != "" && echo ${APXS} || echo "${INSTALLDIR}/apache/bin/apxs")
 php-apache-msg:
 	@echo " *** check for ${PHP_VER} Apache module *** "
 php-apache-deps: fs zlib libxml2
-	-@APXS2=`echo "${PHP_CFG}" | grep -c "--with-apxs2=" | tr -d '\n'` ; \
-	if [ "$${APXS2}" = "0" ]; then \
-		make apache \
+	@if [ "${APXSBIN}" = "${INSTALLDIR}/apache/bin/apxs" ]; then \
+		make apache ; \
 	fi
 php-apache: php-apache-deps php-apache-msg
-	-@INSTR=`echo "${FORCE}" | sed s/force-all/,php-apache/ | grep -c ",php-apache" | tr -d '\n'` ; \
+	@APACHEMODDIR=`${APXSBIN} -q LIBEXECDIR`
+	@APACHECONFDIR=`${APXSBIN} -q SYSCONFDIR`
+	@INSTR=`echo "${FORCE}" | sed s/force-all/,php-apache/ | grep -c ",php-apache" | tr -d '\n'` ; \
 	if [ "$${INSTR}" = "1" ]; then \
-		rm -f ${INSTALLDIR}/apache/modules/libphp5.so ; \
+		rm -f $${APACHEMODDIR}/libphp5.so ; \
 	fi
-	@if [ ! -f ${INSTALLDIR}/apache/modules/libphp5.so ]; then \
+	@if [ ! -f $${APACHEMODDIR}/libphp5.so ]; then \
 		echo " *** ${PHP_VER} Apache module will be installed *** " \
 		&& (cd ${INSTALLDIR}/tmp \
 			&& $(SHELL) ${INSTALLDIR}/tmp/download.sh ${PHP_URL} ${INSTALLDIR}/tmp ${PHP_VER}.tar.gz\
@@ -38,10 +44,10 @@ php-apache: php-apache-deps php-apache-msg
 			&& make \
 			&& make install \
 			&& echo "date.timezone = Europe/Berlin" > ${INSTALLDIR}/etc/php/conf.d/date.ini \
-			&& echo  "<IfModule mod_php5.c>" >> ${INSTALLDIR}/apache/conf/httpd.conf \
-			&& echo  "AddType  application/x-httpd-php         .php" >> ${INSTALLDIR}/apache/conf/httpd.conf \
-			&& echo  "AddType  application/x-httpd-php-source  .phps" >> ${INSTALLDIR}/apache/conf/httpd.conf \
-			&& echo  "</IfModule>" >> ${INSTALLDIR}/apache/conf/httpd.conf \
+			&& echo  "<IfModule mod_php5.c>" >> $${APACHECONFDIR}/httpd.conf \
+			&& echo  "AddType  application/x-httpd-php         .php" >> $${APACHECONFDIR}/httpd.conf \
+			&& echo  "AddType  application/x-httpd-php-source  .phps" >> $${APACHECONFDIR}/httpd.conf \
+			&& echo  "</IfModule>" >> $${APACHECONFDIR}/httpd.conf \
 			&& rm -Rf ${INSTALLDIR}/tmp/${PHP_VER} \
 		) \
 	fi
